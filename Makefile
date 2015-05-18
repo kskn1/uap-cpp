@@ -1,29 +1,23 @@
-CC=g++
-LDFLAGS=-lboost_regex -lboost_system -lyaml-cpp -lglog
-CFLAGS=-std=c++0x -Wall -Werror -g -O3
+CC = g++-4.9
+LDFLAGS = -shared -lyaml-cpp
+CLIB_FLAGS = -std=c++1y -fPIC -Wall -Werror -g -O2 -I../yaml-cpp/include/
+TARGET_LIB = libua_parser.so
+TARGET_DIR = ./obj
 
-# wildcard object build target
-%.o: %.cpp
-	$(CC) -c $(CFLAGS) $*.cpp -o $*.o $(LDFLAGS)
-	@$(CC) -MM $(CFLAGS) $*.cpp $(LDFLAGS) > $*.d
+LIB_SRC = ua_parser.cpp
+LIB_OBJ = $(LIB_SRC:%.cpp=$(TARGET_DIR)/%.o)
 
-uaparser_cpp: libuaparser_cpp.a
+$(TARGET_DIR)/%.o: %.cpp
+	$(CC) -c $(CLIB_FLAGS) $^ -o $(TARGET_DIR)/$*.o $(LDFLAGS)
+	@$(CC) -MM $(CLIB_FLAGS) $^ $(LDFLAGS) > $(TARGET_DIR)/$*.d
+	
+$(TARGET_LIB): $(LIB_OBJ)
+	$(CC) $(CLIB_FLAGS) $(LDFLAGS) -o $(TARGET_DIR)/$@ $^
 
-libuaparser_cpp.a: UaParser.o
-	ar rcs $@ $^
+check_dir:
+	mkdir -p $(TARGET_DIR)
 
-UaParserTest: libuaparser_cpp.a UaParserTest.o
-	$(CC) $(CFLAGS) $^ -o $@ libuaparser_cpp.a $(LDFLAGS) -lgtest -lpthread
+all: check_dir $(TARGET_LIB) 
 
-test: UaParserTest
-	./UaParserTest
-
-# clean everything generated
 clean:
-	find . -name "*.o" -exec rm -rf {} \; # clean up object files
-	find . -name "*.d" -exec rm -rf {} \; # clean up dependencies
-	rm -f UaParserTest *.a
-
-# automatically include the generated *.d dependency make targets
-# that are created from the wildcard %.o build target above
--include $(OBJS:.o=.d)
+	rm -rf $(TARGET_DIR)/*.d $(TARGET_DIR)/*.o $(TARGET_DIR)/$(TARGET_LIB) 
